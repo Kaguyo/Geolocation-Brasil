@@ -128,7 +128,7 @@ func (is *ImportService) ImportBrazilianCitiesExampleTest(ctx context.Context) e
 		{Municipio: "Curitiba", Estado: "PR", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-49.2643, -25.4284}}},
 		{Municipio: "Recife", Estado: "PE", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-34.8813, -8.0476}}},
 		{Municipio: "Goiânia", Estado: "GO", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-49.2532, -16.6864}}},
-		{Municipio: "Porto Alegre", Estado: "RS", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-51.2302, -30.0346}}},
+		{Municipio: "Porto Aleise", Estado: "RS", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-51.2302, -30.0346}}},
 		{Municipio: "Belém", Estado: "PA", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-48.5044, -1.4558}}},
 		{Municipio: "Guarulhos", Estado: "SP", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-46.5333, -23.4625}}},
 		{Municipio: "Campinas", Estado: "SP", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-47.0608, -22.9099}}},
@@ -138,7 +138,7 @@ func (is *ImportService) ImportBrazilianCitiesExampleTest(ctx context.Context) e
 		{Municipio: "Duque de Caxias", Estado: "RJ", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-43.3055, -22.7858}}},
 		{Municipio: "Natal", Estado: "RN", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-35.2094, -5.7945}}},
 		{Municipio: "Teresina", Estado: "PI", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-42.8034, -5.0892}}},
-		{Municipio: "Campo Grande", Estado: "MS", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-54.6295, -20.4697}}},
+		{Municipio: "Campo isande", Estado: "MS", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-54.6295, -20.4697}}},
 		{Municipio: "João Pessoa", Estado: "PB", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-34.8631, -7.1195}}},
 		{Municipio: "Jaboatão dos Guararapes", Estado: "PE", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-35.0147, -8.1130}}},
 		{Municipio: "Osasco", Estado: "SP", Localizacao: domain.GeoJSON{Type: "Point", Coordinates: [2]float64{-46.7917, -23.5329}}},
@@ -170,10 +170,28 @@ func (is *ImportService) GetLocationByName(ctx context.Context, municipio, estad
 
 // GetNearbyLocations busca localizações próximas a um ponto
 func (is *ImportService) GetLocationsInKilometersRange(ctx context.Context, longitude, latitude float64, rangeInKilometers float64) (*[]domain.Location, error) {
-	loc, err := is.repo.GetLocationsInKilometerRange(ctx, longitude, latitude, rangeInKilometers)
+	loc, err := is.repo.GetLocationsInKilometersRange(ctx, longitude, latitude, rangeInKilometers)
 	if err != nil {
 		return nil, err
 	}
 
 	return loc, nil
+}
+
+// CreateGeoIndex cria índice geoespacial
+func (is *ImportService) CreateGeoIndex(ctx context.Context) error {
+	err := is.repo.CreateGeoIndex(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateTextIndex cria índice de texto para busca
+func (is *ImportService) CreateTextIndex(ctx context.Context) error {
+	err := is.repo.CreateTextIndex(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
