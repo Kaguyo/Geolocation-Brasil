@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: geolocation-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: geolocalizacao_br
+    networks:
+      - geolocation-network
+
+  api:
+    build: .
+    container_name: geolocation-api
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      DB_NAME: geolocalizacao_br
+      API_PORT: 8080
+    networks:
+      - geolocation-network
+    command: ["/geolocation-api", "-serve", "-mongo-uri=mongodb://mongodb:27017"]
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  geolocation-network:
+    driver: bridge
