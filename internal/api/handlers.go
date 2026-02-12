@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -29,6 +30,10 @@ func (api *API) GetLocationByNameHandler(w http.ResponseWriter, r *http.Request)
 	vars := mux.Vars(r)
 	municipio := vars["municipio"]
 	estado := r.URL.Query().Get("estado")
+
+	// Normalizar entrada do usuário: capitalize cada palavra
+	municipio = strings.ToTitle(strings.ToLower(municipio))
+	estado = strings.ToUpper(estado)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
