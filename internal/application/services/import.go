@@ -11,6 +11,7 @@ import (
 
 	domain "github.com/Kaguyo/Geolocation-Brasil/internal/domain/entities"
 	domainIF "github.com/Kaguyo/Geolocation-Brasil/internal/domain/interfaces"
+	"github.com/Kaguyo/Geolocation-Brasil/internal/utils"
 )
 
 type ImportService struct {
@@ -125,8 +126,8 @@ func (is *ImportService) ImportData(ctx context.Context, filename string) error 
 
 		// Usar o estado convertido (2 letras)
 		location := domain.Location{
-			Municipio: record[1], // name
-			Estado:    estado,    // código de estado convertido (SP, BA, etc)
+			Municipio: utils.NormalizeMunicipio(record[1]), // name com normalização
+			Estado:    estado,                              // código de estado convertido (SP, BA, etc)
 			Localizacao: domain.GeoJSON{
 				Type:        "Point",
 				Coordinates: [2]float64{lon, lat},

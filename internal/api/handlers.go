@@ -32,9 +32,24 @@ func (api *API) GetLocationByNameHandler(w http.ResponseWriter, r *http.Request)
 	estado := r.URL.Query().Get("estado")
 
 	// Normalizar entrada do usuário: capitalize cada palavra
-	municipio = strings.ToTitle(strings.ToLower(municipio))
-	estado = strings.ToUpper(estado)
+	splittedMunicipio := strings.Split(municipio, " ")
 
+	for i, word := range splittedMunicipio {
+		if len(word) < 3 {
+			continue
+		}
+
+		word = strings.ToLower(word)
+
+		runes := []rune(word)
+		runes[0] = []rune(strings.ToUpper(string(runes[0])))[0]
+
+		splittedMunicipio[i] = string(runes)
+	}
+
+	municipio = strings.Join(splittedMunicipio, " ") // Municipio normalizado: Xxxx Xx Xxxx
+	estado = strings.ToUpper(estado)                 // Estado normalizado: XX
+	log.Println(municipio)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

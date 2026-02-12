@@ -60,6 +60,11 @@ func (gr *GeoRepository) InsertLocations(ctx context.Context, locationBuffer []d
 		return nil
 	}
 
+	// Normalizar municipios antes de inserir
+	for i := range locationBuffer {
+		locationBuffer[i].Municipio = utils.NormalizeMunicipio(locationBuffer[i].Municipio)
+	}
+
 	// Converte []domain.Location para []interface{} exigido pelo InsertMany
 	documents := make([]interface{}, len(locationBuffer))
 	for i, loc := range locationBuffer {
@@ -108,6 +113,11 @@ func (gr *GeoRepository) ImportTest(ctx context.Context, locations []domain.Loca
 	// Limpar coleção antes de importar
 	if err := gr.collection.Drop(ctx); err != nil {
 		log.Printf("Aviso ao limpar coleção: %v", err)
+	}
+
+	// Normalizar municipios antes de inserir
+	for i := range locations {
+		locations[i].Municipio = utils.NormalizeMunicipio(locations[i].Municipio)
 	}
 
 	// Converter para []interface{}
