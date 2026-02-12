@@ -15,5 +15,6 @@ type IImportService interface {
 	CreateGeoIndex(ctx context.Context) error
 	// CreateTextIndex cria índice de texto para busca
 	CreateTextIndex(ctx context.Context) error
-	// Inserts as many locations as given through parameter
+	// ResetCollection recria a coleção, removendo todos os dados existentes
+	ResetCollection(ctx context.Context, collection string) error
 }

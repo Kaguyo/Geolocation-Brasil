@@ -8,6 +8,7 @@ import (
 	domain "github.com/Kaguyo/Geolocation-Brasil/internal/domain/entities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type GeoRepository struct {
@@ -126,14 +127,22 @@ func (gr *GeoRepository) ImportTest(ctx context.Context, locations []domain.Loca
 
 // GetLocationByName busca localização por nome de município ou estado
 func (gr *GeoRepository) GetLocationByName(ctx context.Context, municipio, estado string) (*domain.Location, error) {
+	// Construir filtro dinamicamente: se estado for vazio, apenas buscar por municipio
 	filter := bson.M{
 		"municipio": municipio,
-		"estado":    estado,
 	}
+
+	// Se estado foi fornecido, adicionar ao filtro
+	if estado != "" {
+		filter["estado"] = estado
+	}
+
+	// Opções: ordenar por população descrescente para retornar o resultado mais relevante
+	opts := options.FindOne().SetSort(bson.M{"populacao": -1})
 
 	var location domain.Location
 
-	err := gr.collection.FindOne(ctx, filter).Decode(&location)
+	err := gr.collection.FindOne(ctx, filter, opts).Decode(&location)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
@@ -142,4 +151,13 @@ func (gr *GeoRepository) GetLocationByName(ctx context.Context, municipio, estad
 	}
 
 	return &location, nil
+}
+
+func (gr *GeoRepository) DropCollection(ctx context.Context, collection string) error {
+	err := gr.collection.Drop(ctx)
+	if err != nil {
+		return fmt.Errorf("erro ao deletar dropar collection: %v", err)
+	}
+	log.Println("✅ Coleção deletada com sucesso!")
+	return nil
 }

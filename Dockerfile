@@ -1,35 +1,36 @@
-FROM golang:1.21-alpine AS builder
+# ==============================
+# Etapa 1 - Build
+# ==============================
+FROM golang:1.22-alpine AS builder
 
-# Instalar dependências
 RUN apk add --no-cache git
 
-# Configurar diretório de trabalho
 WORKDIR /app
 
-# Copiar arquivos de dependência
+# Copiar apenas dependências primeiro (melhora cache)
 COPY go.mod go.sum ./
-
-# Baixar dependências
 RUN go mod download
 
-# Copiar código fonte
+# Copiar código
 COPY . .
 
-# Compilar aplicação
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o geolocation-api .
+# Compilar apontando para ./cmd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o geolocation-api ./cmd
 
-# Etapa final - imagem mínima
-FROM alpine:latest
+# ==============================
+# Etapa 2 - Runtime mínima
+# ==============================
+FROM alpine:3.19
 
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /root/
+WORKDIR /app
 
-# Copiar binário compilado
 COPY --from=builder /app/geolocation-api .
 
-# Expor porta
 EXPOSE 8080
 
-# Comando padrão
-CMD ["./geolocation-api", "-serve"]
+# Default: baixar, descompactar e importar dados, depois iniciar servidor
+CMD ["./geolocation-api", "-importall", "-serve", "-port=8080"]
+

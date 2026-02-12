@@ -19,4 +19,6 @@ type IGeoRepository interface {
 	GetLocationByName(ctx context.Context, municipio, estado string) (*domain.Location, error)
 	// ImportBrazilianCities importa dados simplificados de cidades brasileiras
 	ImportTest(ctx context.Context, locations []domain.Location) error
+	// DropCollection recria a coleção, removendo todos os dados existentes
+	DropCollection(ctx context.Context, collection string) error
 }

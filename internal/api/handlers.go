@@ -20,8 +20,8 @@ type API struct {
 }
 
 // NewAPI cria uma nova instância da API
-func NewAPI(services interfaces.IImportService) *API {
-	return &API{importService: services}
+func NewAPI(service interfaces.IImportService) *API {
+	return &API{importService: service}
 }
 
 // GetLocationByNameHandler busca localização por nome
@@ -41,6 +41,16 @@ func (api *API) GetLocationByNameHandler(w http.ResponseWriter, r *http.Request)
 		}
 		log.Printf("Erro ao buscar localização: %v", err)
 		respondWithError(w, http.StatusInternalServerError, "Erro ao buscar localização")
+		return
+	}
+
+	if location == nil {
+		respondWithError(w, http.StatusNotFound, "Localização não encontrada")
+		return
+	}
+
+	if len(location.Localizacao.Coordinates) < 2 {
+		respondWithError(w, http.StatusInternalServerError, "Localização sem coordenadas válidas")
 		return
 	}
 

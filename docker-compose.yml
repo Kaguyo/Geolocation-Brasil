@@ -6,13 +6,17 @@ services:
     container_name: geolocation-mongodb
     restart: always
     ports:
-      - "27017:27017"
+    - "27018:27017"
     volumes:
       - mongodb_data:/data/db
-    environment:
-      MONGO_INITDB_DATABASE: geolocalizacao_br
     networks:
       - geolocation-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
   api:
     build: .
@@ -21,18 +25,25 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mongodb
-    environment:
-      MONGO_URI: mongodb://mongodb:27017
-      DB_NAME: geolocalizacao_br
-      API_PORT: 8080
+      mongodb:
+        condition: service_healthy
     networks:
       - geolocation-network
-    command: ["/geolocation-api", "-serve", "-mongo-uri=mongodb://mongodb:27017"]
+    # Comando padrão: baixar, descompactar e importar dados (~5570 municípios), depois iniciar servidor
+    # Para usar dados de exemplo apenas, use: ./geolocation-api -import -serve -mongo-uri=mongodb://mongodb:27017
+    command:
+      [
+        "./geolocation-api",
+        "-importall",
+        "-serve",
+        "-mongo-uri=mongodb://mongodb:27017"
+      ]
+    environment:
+      - GOCACHE=/tmp/go-build
+
 
 volumes:
   mongodb_data:
-    driver: local
 
 networks:
   geolocation-network:

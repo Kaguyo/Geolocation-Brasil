@@ -13,6 +13,7 @@ type Application struct {
 	DB      *mongodb.Database
 	Router  http.Handler
 	Service services.ImportService
+	Server  *http.Server
 }
 
 func Build(mongoURI, dbName, collection string) (*Application, error) {
@@ -23,7 +24,7 @@ func Build(mongoURI, dbName, collection string) (*Application, error) {
 	}
 
 	var geoRepository interfaces.IGeoRepository
-	geoRepository = mongodb.NewGeoRepository(db.Database)
+	geoRepository = mongodb.NewGeoRepository(db.Database) // Ajustar para aceitar interface em vez de struct concreta
 	geoService := services.NewGeoService(geoRepository)
 	geoHandler := handlers.NewAPI(geoService)
 	router := geoHandler.SetupRoutes()

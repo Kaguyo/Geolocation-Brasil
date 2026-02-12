@@ -46,6 +46,19 @@ func (is *ImportService) ImportData(ctx context.Context, filename string) error 
 	var locations []domain.Location
 
 	count := 0
+	rejectedTotal := 0
+	rejectedCountry := 0
+	rejectedState := 0
+	rejectedCoords := 0
+	rejectedBounds := 0
+
+	// Mapa de conversão: admin1 code do GeoNames (número) -> código de estado (2 letras)
+	stateCodeMap := map[string]string{
+		"01": "DF", "02": "ES", "03": "BA", "04": "GO", "05": "MA", "06": "MT", "07": "MS",
+		"08": "MG", "09": "PA", "10": "PB", "11": "PR", "12": "PE", "13": "PI",
+		"14": "RJ", "15": "RN", "16": "RS", "17": "RO", "18": "RR", "19": "SC",
+		"20": "SP", "21": "SE", "22": "TO", "23": "RS", "24": "RO", "25": "AC", "26": "SC", "27": "SP", "28": "AL", "29": "AP", "30": "AM", "31": "CE",
+	}
 
 	for {
 		record, err := reader.Read()
@@ -57,18 +70,51 @@ func (is *ImportService) ImportData(ctx context.Context, filename string) error 
 			continue
 		}
 
+		rejectedTotal++
+
 		// Formato GeoNames: geonameid, name, asciiname, alternatenames, latitude, longitude, ...
 		if len(record) < 18 {
 			continue
 		}
 
+		// Filtro crítico: apenas importar registros do Brasil (countryCode == "BR")
+		if record[8] != "BR" {
+			rejectedCountry++
+			continue
+		}
+
+		// Validar estado: não pode estar vazio
+		estadoCode := record[10]
+		if estadoCode == "" {
+			rejectedState++
+			continue
+		}
+
+		// Converter admin1 code (número) para estado (2 letras)
+		estado, exists := stateCodeMap[estadoCode]
+		if !exists {
+			log.Printf("⚠️ Estado inválido ignorado: %s (código não encontrado no mapa, município: %s)", estadoCode, record[1])
+			rejectedState++
+			continue
+		}
+
 		lat, err := strconv.ParseFloat(record[4], 64)
 		if err != nil {
+			rejectedCoords++
 			continue
 		}
 
 		lon, err := strconv.ParseFloat(record[5], 64)
 		if err != nil {
+			rejectedCoords++
+			continue
+		}
+
+		// Validar bounds de coordenadas brasileiras (segurança adicional)
+		// Brasil: lat entre -33.7 e 5.3, lon entre -73.9 e -28.8
+		if lat < -33.8 || lat > 5.4 || lon < -74.0 || lon > -28.7 {
+			rejectedBounds++
+			log.Printf("DEBUG: Coordenadas fora do bounds: lat=%v, lon=%v (municipio=%s, estado=%s)", lat, lon, record[1], estado)
 			continue
 		}
 
@@ -77,10 +123,10 @@ func (is *ImportService) ImportData(ctx context.Context, filename string) error 
 			population, _ = strconv.Atoi(record[14])
 		}
 
-		// record[10] é o código admin1 (estado)
+		// Usar o estado convertido (2 letras)
 		location := domain.Location{
-			Municipio: record[1],  // name
-			Estado:    record[10], // admin1 code
+			Municipio: record[1], // name
+			Estado:    estado,    // código de estado convertido (SP, BA, etc)
 			Localizacao: domain.GeoJSON{
 				Type:        "Point",
 				Coordinates: [2]float64{lon, lat},
@@ -95,10 +141,10 @@ func (is *ImportService) ImportData(ctx context.Context, filename string) error 
 		if count%1000 == 0 {
 			err := is.repo.InsertLocations(ctx, locations)
 			if err != nil {
-				log.Println(fmt.Errorf(""))
+				log.Println(fmt.Errorf("erro ao inserir lote: %v", err))
 				return err
 			}
-
+			locations = []domain.Location{} // Limpar o array após inserção
 		}
 	}
 
@@ -111,6 +157,13 @@ func (is *ImportService) ImportData(ctx context.Context, filename string) error 
 	}
 
 	log.Printf("✅ Importação concluída! Total: %d registros", count)
+	log.Printf("📊 Estatísticas de rejeição:")
+	log.Printf("   - Total de linhas processadas: %d", rejectedTotal)
+	log.Printf("   - Rejeitadas por país diferente de BR: %d", rejectedCountry)
+	log.Printf("   - Rejeitadas por estado inválido: %d", rejectedState)
+	log.Printf("   - Rejeitadas por erro ao ler coordenadas: %d", rejectedCoords)
+	log.Printf("   - Rejeitadas por coordenadas fora dos bounds: %d", rejectedBounds)
+	log.Printf("   - ✓ Aceitas e importadas: %d", count)
 	return nil
 }
 
@@ -193,5 +246,25 @@ func (is *ImportService) CreateTextIndex(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// ResetCollection recria a coleção, removendo todos os dados existentes
+func (is *ImportService) ResetCollection(ctx context.Context, collection string) error {
+	err := is.repo.DropCollection(ctx, collection)
+	if err != nil {
+		return err
+	}
+
+	err = is.repo.CreateGeoIndex(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = is.repo.CreateTextIndex(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

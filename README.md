@@ -47,10 +47,35 @@ go mod download
 
 ## 📊 Importar Dados
 
-### Opção 1: Dados de Exemplo (30 principais cidades)
+### Opção 1: Dados Completos do GeoNames (234.691 registros) - RECOMENDADO
 
+O novo comando `-importall` faz tudo automaticamente: baixa o arquivo do GeoNames, descompacta e importa para o banco de dados.
+
+**Sem servir a API:**
 ```bash
-go run . -import -serve
+go run ./cmd -importall
+```
+
+**Importar dados e iniciar servidor:**
+```bash
+go run ./cmd -importall -serve
+```
+
+Isso irá:
+- ✅ Baixar BR.zip automaticamente do servidor GeoNames
+- ✅ Descompactar o arquivo
+- ✅ Importar **234.691 registros brasileiros** (municípios, bairros e localidades)
+- ✅ Filtrar automaticamente apenas dados do Brasil com estados válidos
+- ✅ Criar índices geoespaciais e de texto
+- ✅ Iniciar o servidor na porta 8080 (se `-serve` foi usado)
+
+**Tempo de importação:** ~5-10 minutos (depende da conexão)
+
+### Opção 2: Dados de Exemplo (30 principais cidades)
+
+Para testes rápidos, use:
+```bash
+go run ./cmd -import -serve
 ```
 
 Isso irá:
@@ -58,33 +83,74 @@ Isso irá:
 - Criar índices geoespaciais
 - Iniciar o servidor na porta 8080
 
-### Opção 2: Dados Completos do GeoNames (5570 municípios)
+### Opção 3: Importar de Arquivo CSV Customizado
 
-**Passo 1:** Baixar dados do GeoNames
+Se você tem um arquivo CSV no formato GeoNames:
 ```bash
-# Download do arquivo de cidades do Brasil
-wget http://download.geonames.org/export/dump/BR.zip
-unzip BR.zip
+go run ./cmd -import -file=seu_arquivo.txt -serve
 ```
 
-**Passo 2:** Importar
-```bash
-go run . -import -file=BR.txt -serve
-```
+**Nota:** O arquivo deve estar no formato GeoNames com campos separados por tab.
 
 ## 🔧 Uso da API
 
-### Iniciar servidor
+### Primeira Vez: Importar Dados + Iniciar Servidor
+
+```bash
+# Opção 1: Usar dados completos do GeoNames (recomendado)
+go run ./cmd -importall -serve
+
+# Opção 2: Usar dados de exemplo (mais rápido para testes)
+go run ./cmd -import -serve
+```
+
+### Após Importação: Apenas Iniciar Servidor
+
+Depois que os dados foram importados uma vez, você pode apenas iniciar o servidor:
 
 ```bash
 # Porta padrão (8080)
-go run . -serve
+go run ./cmd -serve
 
 # Porta customizada
-go run . -serve -port=3000
+go run ./cmd -serve -port=3000
 
 # MongoDB remoto
-go run . -serve -mongo-uri="mongodb://usuario:senha@host:27017"
+go run ./cmd -serve -mongo-uri="mongodb://usuario:senha@host:27017"
+```
+
+**Nota:** O servidor cria os índices automaticamente na primeira execução, então você não precisa fazer nada.
+
+### Flags Disponíveis
+
+```
+-import              Importar dados de exemplo (30 principais cidades)
+-importall          Baixar BR.zip do GeoNames, descompactar e importar todos os dados (~5570 municípios)
+-file string        Arquivo CSV para importar (formato GeoNames) - usado com -import
+-serve              Iniciar servidor API
+-port string        Porta do servidor (padrão: 8080)
+-mongo-uri string   URI de conexão do MongoDB (padrão: mongodb://localhost:27017)
+```
+
+**Exemplos de uso:**
+```bash
+# Apenas importar dados de exemplo
+go run ./cmd -import
+
+# Importar dados de exemplo e iniciar servidor
+go run ./cmd -import -serve
+
+# Importar dados completos do GeoNames e iniciar servidor
+go run ./cmd -importall -serve
+
+# Apenas iniciar servidor (dados já importados)
+go run ./cmd -serve
+
+# Importar arquivo customizado en iniciar servidor
+go run ./cmd -import -file=dados.txt -serve
+
+# Servidor em porta customizada com MongoDB remoto
+go run ./cmd -serve -port=3000 -mongo-uri="mongodb://user:pass@host:27017"
 ```
 
 ### Endpoints Disponíveis
@@ -104,15 +170,28 @@ Resposta:
 
 #### 2. Buscar por Município
 
+**Sem especificar estado (retorna mais populoso):**
 ```bash
-# Buscar São Paulo
-curl http://localhost:8080/location/São%20Paulo
+# Buscar São Paulo (retorna a mais populosa)
+curl "http://localhost:8080/location/S%C3%A3o%20Paulo"
 
-# Buscar com filtro de estado
-curl "http://localhost:8080/location/Campinas?estado=SP"
+# Buscar Porto Alegre (retorna a mais populosa)
+curl "http://localhost:8080/location/Porto%20Alegre"
 ```
 
-Resposta:
+**Com filtro de estado (busca específica):**
+```bash
+# Buscar São Paulo em SP
+curl "http://localhost:8080/location/S%C3%A3o%20Paulo?estado=SP"
+
+# Buscar Campinas em SP
+curl "http://localhost:8080/location/Campinas?estado=SP"
+
+# Buscar Porto Alegre em RS
+curl "http://localhost:8080/location/Porto%20Alegre?estado=RS"
+```
+
+**Resposta (sucesso):**
 ```json
 {
   "municipio": "São Paulo",
@@ -122,12 +201,39 @@ Resposta:
 }
 ```
 
-#### 3. Buscar Localizações Próximas
+**Resposta (não encontrado):**
+```json
+{
+  "error": "Not Found",
+  "message": "Localização não encontrada"
+}
+```
+
+**⚠️ Importante: URL Encoding**
+- Espaços devem ser codificados como `%20`
+- Caracteres especiais (ç, ã, é, ó) são codificados como UTF-8
+- Exemplos:
+  - `São Paulo` → `S%C3%A3o%20Paulo`
+  - `Rio de Janeiro` → `Rio%20de%20Janeiro`
+  - `Brasília` → `Brasília` (ou `Bras%C3%ADlia`)
+
+#### 3. Buscar Localizações Próximas (Geoespacial)
 
 ```bash
+# Buscar num raio de 50km de São Paulo (padrão)
+curl "http://localhost:8080/nearby?lat=-23.5505&lon=-46.6333"
+
 # Buscar num raio de 100km de São Paulo
 curl "http://localhost:8080/nearby?lat=-23.5505&lon=-46.6333&distance=100"
+
+# Buscar num raio de 200km de São Paulo
+curl "http://localhost:8080/nearby?lat=-23.5505&lon=-46.6333&distance=200"
 ```
+
+**Parâmetros:**
+- `lat` (obrigatório): Latitude em graus decimais
+- `lon` (obrigatório): Longitude em graus decimais
+- `distance` (opcional): Distância em quilômetros (padrão: 50km)
 
 Resposta:
 ```json
@@ -157,13 +263,34 @@ Resposta:
 
 ```
 geolocation-br/
-├── main.go           # Aplicação principal e CLI
-├── models.go         # Estruturas de dados
-├── database.go       # Conexão e configuração MongoDB
-├── import.go         # Lógica de importação de dados
-├── handlers.go       # Handlers da API REST
-├── go.mod            # Dependências
-└── README.md         # Este arquivo
+├── cmd/
+│   └── main.go                    # Aplicação principal e CLI
+├── internal/
+│   ├── api/
+│   │   ├── handlers.go            # Handlers da API REST
+│   │   └── response.go            # Estruturas de resposta
+│   ├── application/
+│   │   └── services/
+│   │       ├── import.go          # Lógica de importação de dados
+│   │       └── interfaces/
+│   │           └── import.go      # Interfaces dos serviços
+│   ├── bootstrap/
+│   │   └── container.go           # Configuração da aplicação
+│   ├── domain/
+│   │   ├── entities/
+│   │   │   └── models.go          # Modelos de dados (Location, GeoJSON)
+│   │   └── interfaces/
+│   │       └── geo_repository.go  # Interface do repositório
+│   ├── infrastructure/
+│   │   └── mongodb/
+│   │       ├── connection.go      # Conexão com MongoDB
+│   │       └── geo_repository.go  # Implementação do repositório
+│   └── utils/
+│       └── zip.go                 # Utilitários (download, unzip)
+├── go.mod                          # Dependências
+├── Dockerfile                       # Container Docker
+├── docker-compose.yml              # Orquestração Docker
+└── README.md                        # Este arquivo
 ```
 
 ## 🗄️ Estrutura do Banco de Dados
@@ -199,7 +326,7 @@ const axios = require('axios');
 async function getCoordinates(city, state) {
   const url = `http://localhost:8080/location/${encodeURIComponent(city)}`;
   const params = state ? { estado: state } : {};
-  
+
   const response = await axios.get(url, { params });
   return response.data;
 }
@@ -218,7 +345,7 @@ import requests
 def get_coordinates(city, state=None):
     url = f"http://localhost:8080/location/{city}"
     params = {"estado": state} if state else {}
-    
+
     response = requests.get(url, params=params)
     return response.json()
 
@@ -248,37 +375,44 @@ type Location struct {
 
 func getCoordinates(city, state string) (*Location, error) {
     url := fmt.Sprintf("http://localhost:8080/location/%s?estado=%s", city, state)
-    
+
     resp, err := http.Get(url)
     if err != nil {
         return nil, err
     }
     defer resp.Body.Close()
-    
+
     var loc Location
     if err := json.NewDecoder(resp.Body).Decode(&loc); err != nil {
         return nil, err
     }
-    
+
     return &loc, nil
 }
 ```
 
 ## 🔍 Fontes de Dados
 
-### Dados de Exemplo
-O projeto inclui 30 principais cidades brasileiras pré-configuradas (todas as capitais + maiores cidades).
+### Dados de Exemplo Inclusos
+- **O que é**: 30 principais cidades brasileiras (todas as capitais + maiores cidades)
+- **Como usar**: `go run ./cmd -import`
+- **Tempo**: Instantâneo
+- **Uso**: Testes e prototipagem rápida
 
-### GeoNames (Completo)
+### GeoNames - Dados Completos (RECOMENDADO)
 - **URL**: http://download.geonames.org/export/dump/
 - **Arquivo**: BR.zip
 - **Contém**: ~5.570 municípios brasileiros
 - **Campos**: nome, coordenadas, população, código IBGE, etc.
 - **Licença**: Creative Commons Attribution 4.0
+- **Como usar**: `go run ./cmd -importall -serve`
+- **Tempo**: ~5-10 minutos na primeira vez (depende da conexão)
+- **Nota**: Após a primeira importação, você só precisa usar `-serve`
 
-### Alternativas
+### Alternativas de Dados
 - **IBGE**: https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais.html
 - **Brasil API**: https://brasilapi.com.br/docs (para integração híbrida)
+- **Sua própria fonte**: Use o flag `-import -file=seu_arquivo.txt` com dados no formato GeoNames
 
 ## ⚙️ Configuração Avançada
 
@@ -302,16 +436,55 @@ go build -ldflags="-s -w" -o geolocation-api
 
 ### Docker
 
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o geolocation-api
+**Com Docker Compose (recomendado):**
+```bash
+# Iniciar MongoDB + API (com importação automática de dados)
+docker-compose up --build
 
-FROM alpine:latest
-COPY --from=builder /app/geolocation-api /geolocation-api
-EXPOSE 8080
-CMD ["/geolocation-api", "-serve"]
+# Em modo detached (background)
+docker-compose up -d --build
+
+# Parar serviços
+docker-compose down
+```
+
+Este comando:
+- ✅ Cria container MongoDB na porta 27018
+- ✅ Cria container API na porta 8080
+- ✅ Baixa e importa automaticamente ~5.570 municípios do GeoNames
+- ✅ Cria índices geoespaciais
+- ✅ Inicia o servidor API
+
+**Com Docker diretamente:**
+```bash
+# Build
+docker build -t geolocation-api .
+
+# Rodar com MongoDB local
+docker run -d \
+  --name geolocation-api \
+  -p 8080:8080 \
+  -e MONGO_URI="mongodb://host.docker.internal:27017" \
+  geolocation-api
+```
+
+**Customizar comportamento do Docker:**
+
+Para usar apenas dados de exemplo ao invés de baixar todos os dados:
+```dockerfile
+# Editar Dockerfile e alterar CMD para:
+CMD ["./geolocation-api", "-import", "-serve", "-port=8080"]
+```
+
+Ou via docker-compose:
+```yaml
+command:
+  [
+    "./geolocation-api",
+    "-import",           # Dados de exemplo apenas
+    "-serve",
+    "-mongo-uri=mongodb://mongodb:27017"
+  ]
 ```
 
 ## 🚦 Performance
