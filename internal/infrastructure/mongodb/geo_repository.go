@@ -6,6 +6,7 @@ import (
 	"log"
 
 	domain "github.com/Kaguyo/Geolocation-Brasil/internal/domain/entities"
+	"github.com/Kaguyo/Geolocation-Brasil/internal/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

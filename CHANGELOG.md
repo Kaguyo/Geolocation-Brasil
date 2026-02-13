@@ -43,24 +43,24 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 | Código | Estado | Código | Estado |
 |--------|--------|--------|--------|
-| 01 | DF | 17 | RO |
-| 02 | ES | 18 | RR |
-| 03 | BA | 19 | SC |
-| 04 | GO | 20 | SP |
-| 05 | MA | 21 | SE |
-| 06 | MT | 22 | TO |
-| 07 | MS | 23 | RS |
-| 08 | MG | 24 | RO |
-| 09 | PA | 25 | AC |
-| 10 | PB | 26 | SC |
-| 11 | PR | 27 | SP |
-| 12 | PE | 28 | AL |
-| 13 | PI | 29 | AP |
-| 14 | RJ | 30 | AM |
-| 15 | RN | 31 | CE |
-| 16 | RS |  |  |
+|   01   |   DF   |   17   |   RO   |
+|   02   |   ES   |   18   |   RR   |
+|   03   |   BA   |   19   |   SC   |
+|   04   |   GO   |   20   |   SP   |
+|   05   |   MA   |   21   |   SE   |
+|   06   |   MT   |   22   |   TO   |
+|   07   |   MS   |   23   |   RS   |
+|   08   |   MG   |   24   |   RO   |
+|   09   |   PA   |   25   |   AC   |
+|   10   |   PB   |   26   |   SC   |
+|   11   |   PR   |   27   |   SP   |
+|   12   |   PE   |   28   |   AL   |
+|   13   |   PI   |   29   |   AP   |
+|   14   |   RJ   |   30   |   AM   |
+|   15   |   RN   |   31   |   CE   |
+|   16   |   RS   |        |        |
 
-## Como Atualizar
+#  # Como Atualizar
 
 Se você está usando uma versão anterior:
 
